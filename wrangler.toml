@@ -1,0 +1,14 @@
+name = "plato-semantic-search"
+main = "src/index.ts"
+compatibility_date = "2024-05-24"
+compatibility_flags = ["nodejs_compat"]
+
+[[vectorize_indexes]]
+binding = "PLATO_VECTORIZE"
+index_name = "plato-semantic-index"
+dimensions = 384
+metric = "cosine"
+
+[[ai_models]]
+binding = "AI"
+model = "@cf/baai/bge-small-en-v1.5"

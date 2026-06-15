@@ -1,0 +1,8 @@
+# Example local development variables
+# Copy this file to .dev.vars and adjust as needed
+
+# Optional webhook secret for validation
+# WEBHOOK_SECRET=your_secure_webhook_secret_here
+
+# Optional API key for endpoint authentication
+# API_KEY=your_production_api_key
