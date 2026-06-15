@@ -1,14 +1,13 @@
 name = "plato-semantic-search"
 main = "src/index.ts"
-compatibility_date = "2024-05-24"
-compatibility_flags = ["nodejs_compat"]
+compatibility_date = "2024-09-23"
 
-[[vectorize_indexes]]
-binding = "PLATO_VECTORIZE"
-index_name = "plato-semantic-index"
-dimensions = 384
-metric = "cosine"
-
-[[ai_models]]
+[ai]
 binding = "AI"
-model = "@cf/baai/bge-small-en-v1.5"
+
+[[vectorize]]
+binding = "VECTORIZE"
+index_name = "plato-search"
+
+# Secrets (set via: wrangler secret put API_KEY)
+# API_KEY — optional Bearer token to protect write endpoints

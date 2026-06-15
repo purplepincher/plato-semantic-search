@@ -1,41 +1,77 @@
-// Plato Semantic Search API Types
-export interface SearchRequest {
+export interface Env {
+  AI: Ai;
+  VECTORIZE: VectorizeIndex;
+  API_KEY?: string;
+}
+
+// POST /search
+export interface SearchRequestBody {
   query: string;
   topK?: number;
-  filter?: Record<string, any>;
+  namespace?: string;
+  filter?: VectorizeVectorMetadataFilter;
+  returnMetadata?: 'none' | 'indexed' | 'all';
 }
 
-export interface SearchResult {
+export interface SearchMatch {
   id: string;
   score: number;
-  text?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, VectorizeVectorMetadata>;
 }
 
-export interface UpsertRequest {
-  id: string;
-  text: string;
-  metadata?: Record<string, any>;
-}
-
-export interface BatchUpsertRequest {
-  items: Array<{
-    id: string;
-    text: string;
-    metadata?: Record<string, any>;
-  }>;
-}
-
-export interface SyncEvent {
-  action: "upsert" | "delete";
-  id: string;
-  text?: string;
-  metadata?: Record<string, any>;
-}
-
-export interface IndexStats {
+export interface SearchResponseBody {
+  results: SearchMatch[];
+  query: string;
+  topK: number;
   count: number;
+  model: string;
+  latencyMs: number;
+}
+
+// POST /upsert
+export interface UpsertItem {
+  id: string;
+  /** Raw text to embed. Mutually exclusive with values. */
+  text?: string;
+  /** Pre-computed embedding vector. Mutually exclusive with text. */
+  values?: number[];
+  namespace?: string;
+  metadata?: Record<string, VectorizeVectorMetadata>;
+}
+
+export interface UpsertRequestBody {
+  vectors: UpsertItem[];
+}
+
+export interface UpsertResponseBody {
+  upserted: number;
+  batches: number;
+  model: string;
+  latencyMs: number;
+}
+
+// DELETE /delete
+export interface DeleteRequestBody {
+  ids: string[];
+}
+
+export interface DeleteResponseBody {
+  deleted: number;
+  ids: string[];
+}
+
+// GET /health
+export interface HealthResponseBody {
+  status: 'ok';
+  service: string;
+  timestamp: string;
+  version: string;
+}
+
+// GET /stats
+export interface StatsResponseBody {
+  vectorCount: number;
   dimensions: number;
-  size: string;
-  lastUpdated: string;
+  metric: string;
+  model: string;
 }

@@ -1,315 +1,275 @@
-# Plato Semantic Search API
+# plato-semantic-search
 
-Production-ready Cloudflare Worker semantic search API with real-time Vectorize index sync.
+Production Cloudflare Worker for semantic search over the Plato/SuperInstance crate ecosystem.  
+Uses **Workers AI BGE-small-en-v1.5** (384-dim) for embeddings and **Vectorize** with cosine similarity for ANN retrieval.
 
-## Features
+## Endpoints
 
-- 🔍 **Semantic Search**: Built-in embedding generation using Cloudflare Workers AI
-- 🚀 **Real-time Sync**: Built-in queue support for multi-region index replication
-- 📦 **Batch Operations**: Bulk upsert and delete for large datasets
-- 🔒 **CORS Support**: Pre-configured for cross-origin requests
-- 📊 **Index Stats**: Built-in endpoints for monitoring index health
-- 🛠️ **TypeScript**: Fully typed API and request/response objects
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/health` | Liveness probe |
+| `GET` | `/stats` | Index statistics (vector count, dimensions, metric) |
+| `POST` | `/search` | Semantic search — embed query → cosine ANN |
+| `POST` | `/upsert` | Batch upsert — text→embed or pass pre-computed vectors |
+| `DELETE` | `/delete` | Delete vectors by ID |
 
-## Prerequisites
+All endpoints return JSON and include CORS headers (`Access-Control-Allow-Origin: *`).
 
-1. Node.js 18+ installed
-2. Cloudflare account with Workers and Vectorize access
-3. `wrangler` CLI installed (`npm install -g wrangler`)
+---
 
 ## Setup
 
-### 1. Install Dependencies
+### 1. Create the Vectorize index
+
+BGE-small-en-v1.5 produces **384-dimensional** vectors.  
+Dimensions and metric are immutable after creation.
+
+```bash
+npx wrangler vectorize create plato-search --dimensions=384 --metric=cosine
+```
+
+Optional — create metadata indexes before inserting any vectors:
+
+```bash
+npx wrangler vectorize create-metadata-index plato-search \
+  --property-name=domain --type=string
+npx wrangler vectorize create-metadata-index plato-search \
+  --property-name=wave --type=number
+```
+
+### 2. Install dependencies
+
 ```bash
 npm install
 ```
 
-### 2. Configure Wrangler
+### 3. Optional: protect write endpoints with an API key
 
-Edit `wrangler.toml` to match your environment:
-- Update `index_name` to match your Vectorize index name
-- Adjust `dimensions` to match your embedding model (384 for BGE Small)
-
-### 3. Authenticate with Cloudflare
 ```bash
-wrangler login
+npx wrangler secret put API_KEY
+# Enter your secret when prompted
 ```
 
-### 4. Create Vectorize Index
-```bash
-wrangler vectorize create plato-semantic-index --dimensions=384 --metric=cosine
-```
+When `API_KEY` is set, every request must include `Authorization: Bearer <key>`.
 
-## Local Development
+### 4. Deploy
 
-Start the development server:
 ```bash
+# Local dev (AI requires --remote)
 npm run dev
-```
 
-The API will be available at `http://localhost:8787`
-
-## Deployment
-
-### Production
-```bash
+# Production
 npm run deploy
 ```
 
-### Staging
-```bash
-wrangler deploy --env staging
-```
+---
 
-## API Endpoints
+## API Reference
 
-### Health Check
-```
-GET /health
-```
-Returns service health status.
+### `GET /health`
 
-### Get Index Stats
-```
-GET /index/stats
-```
-Returns Vectorize index statistics.
-
-### Semantic Search
-```
-POST /search
-Content-Type: application/json
-
+```json
 {
-  "query": "your search text",
+  "status": "ok",
+  "service": "plato-semantic-search",
+  "timestamp": "2026-06-15T12:00:00.000Z",
+  "version": "2.0.0"
+}
+```
+
+---
+
+### `GET /stats`
+
+```json
+{
+  "vectorCount": 548,
+  "dimensions": 384,
+  "metric": "cosine",
+  "model": "@cf/baai/bge-small-en-v1.5"
+}
+```
+
+---
+
+### `POST /search`
+
+**Request**
+
+```jsonc
+{
+  "query": "conservation law ternary logic",   // required
+  "topK": 10,                                   // 1-100, default 10
+  "namespace": "wave-3",                        // optional
+  "filter": { "domain": "algebra" },            // optional metadata filter
+  "returnMetadata": "indexed"                   // "none" | "indexed" | "all" (default "indexed")
+}
+```
+
+> `returnMetadata: "all"` silently caps `topK` at 20 (Vectorize limit).
+
+**Response**
+
+```jsonc
+{
+  "results": [
+    { "id": "lau-conservation-c", "score": 0.934, "metadata": { "domain": "algebra" } }
+  ],
+  "query": "conservation law ternary logic",
   "topK": 10,
-  "filter": { "category": "documentation" }
+  "count": 1,
+  "model": "@cf/baai/bge-small-en-v1.5",
+  "latencyMs": 142
 }
 ```
 
-### Find Similar Crates
-```
-POST /similar
-Content-Type: application/json
+**Example**
 
+```bash
+curl -X POST https://plato-semantic-search.<account>.workers.dev/search \
+  -H 'Content-Type: application/json' \
+  -d '{"query":"ternary logic conservation","topK":5}'
+```
+
+---
+
+### `POST /upsert`
+
+Accepts up to **10,000 vectors** per request.  
+Provide `text` (auto-embedded) or pre-computed `values`, not both.
+
+**Request**
+
+```jsonc
 {
-  "crate_name": "plato-core",
-  "topK": 10
-}
-```
-
-### Context-Aware Recommendations
-```
-POST /recommend
-Content-Type: application/json
-
-{
-  "context": "building a fleet management system",
-  "topK": 5
-}
-```
-
-### Quality Gap Analysis
-```
-POST /gap-analysis
-Content-Type: application/json
-
-{
-  "domain": "system-administration"
-}
-```
-
-### Bulk Crate Ingest (Authenticated)
-```
-POST /ingest
-Authorization: Bearer YOUR_INGEST_SECRET
-Content-Type: application/json
-
-[
-  {
-    "name": "plato-core",
-    "description": "Core Plato agent framework",
-    "version": "1.0.0",
-    "domain": "core",
-    "tests": 24,
-    "loc": 1250,
-    "github_url": "https://github.com/SuperInstance/plato-core",
-    "keywords": ["agent-framework", "fleet-management"],
-    "readme": "Full Readme content..."
-  }
-]
-```
-
-### Get Single Crate Metadata
-```
-GET /crates/:crate_name
-```
-
-### Upsert Document
-```
-POST /index/upsert
-Content-Type: application/json
-
-{
-  "id": "doc-123",
-  "text": "Your document text content",
-  "metadata": { "category": "guides" }
-}
-```
-
-### Batch Upsert Documents
-```
-POST /index/upsert-batch
-Content-Type: application/json
-
-{
-  "items": [
+  "vectors": [
     {
-      "id": "doc-123",
-      "text": "First document",
-      "metadata": { "category": "guides" }
+      "id": "lau-flux-rs",
+      "text": "flux hyperbolic geometry Poincare Lorentz",
+      "namespace": "wave-3",
+      "metadata": { "domain": "geometry", "wave": 3 }
     },
     {
-      "id": "doc-456",
-      "text": "Second document",
-      "metadata": { "category": "reference" }
+      "id": "cuda-oxide",
+      "values": [0.12, 0.34],
+      "metadata": { "domain": "gpu" }
     }
   ]
 }
 ```
 
-### Delete Documents
-```
-POST /index/delete
-Content-Type: application/json
+**Response**
 
+```jsonc
 {
-  "ids": ["doc-123", "doc-456"]
+  "upserted": 2,
+  "batches": 1,
+  "model": "@cf/baai/bge-small-en-v1.5",
+  "latencyMs": 380
 }
 ```
 
-### Webhook Sync
+**Batching behaviour**
+
+| Layer | Batch size | Reason |
+|-------|-----------|--------|
+| Workers AI embedding | 100 texts/call | API limit |
+| Vectorize upsert | 1,000 vectors/call | Workers binding limit |
+
+Vectors are queryable ~5-10 seconds after upsert.
+
+**Example**
+
+```bash
+curl -X POST https://plato-semantic-search.<account>.workers.dev/upsert \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "vectors": [
+      {"id":"my-crate","text":"fast SIMD matrix multiplication","metadata":{"domain":"linear-algebra"}}
+    ]
+  }'
 ```
-POST /sync/webhook
-Content-Type: application/json
 
-[
-  {
-    "action": "upsert",
-    "id": "doc-123",
-    "text": "Document text",
-    "metadata": {}
-  },
-  {
-    "action": "delete",
-    "id": "doc-456"
-  }
-]
+---
+
+### `DELETE /delete`
+
+**Request**
+
+```json
+{ "ids": ["lau-flux-rs", "cuda-oxide"] }
 ```
 
-## Real-time Index Sync
+**Response**
 
-### Queue Configuration
+```json
+{ "deleted": 2, "ids": ["lau-flux-rs", "cuda-oxide"] }
+```
 
-Add a queue to your `wrangler.toml` for multi-region sync:
+Accepts up to **10,000 IDs** per request; batched internally at 1,000/call.
+
+---
+
+## Authentication
+
+Set the `API_KEY` secret to enable Bearer-token auth on all endpoints:
+
+```bash
+npx wrangler secret put API_KEY
+```
+
+Then include the header on every request:
+
+```
+Authorization: Bearer <your-key>
+```
+
+Without `API_KEY`, the worker is open (suitable for internal/private deployments).
+
+---
+
+## Development
+
+```bash
+# Type check
+npm run type-check
+
+# Unit tests (no remote needed)
+npm test
+
+# Interactive watch mode
+npm run test:watch
+
+# Local dev against live Vectorize + AI
+npm run dev   # wrangler dev --remote
+```
+
+---
+
+## Architecture
+
+```
+Request
+  └─ index.ts (router + CORS + auth)
+       ├─ GET  /health  → handlers/health.ts
+       ├─ GET  /stats   → handlers/stats.ts    env.VECTORIZE.describe()
+       ├─ POST /search  → handlers/search.ts   AI.run(embed) → VECTORIZE.query()
+       ├─ POST /upsert  → handlers/upsert.ts   AI.run(embed) → VECTORIZE.upsert()
+       └─ DELETE /delete → handlers/delete.ts  VECTORIZE.deleteByIds()
+```
+
+Workers AI model: `@cf/baai/bge-small-en-v1.5` — 384 dimensions, ~33 ms/embed at edge.  
+Vectorize index: cosine similarity, L2-normalised dot product under the hood.
+
+---
+
+## Wrangler config reference
+
 ```toml
-[[queues]]
-binding = "PLATO_SYNC_QUEUE"
-queue_name = "plato-sync-queue"
+[ai]
+binding = "AI"          # env.AI -> Workers AI binding
+
+[[vectorize]]
+binding = "VECTORIZE"   # env.VECTORIZE -> Vectorize index binding
+index_name = "plato-search"
 ```
-
-Create the queue:
-```bash
-wrangler queues create plato-sync-queue
-```
-
-The built-in queue consumer will automatically:
-- Generate embeddings if not provided
-- Upsert/delete records in the Vectorize index
-- Retry failed operations up to 3 times
-
-## Environment Variables
-
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `PLATO_VECTORIZE` | Vectorize index binding | ✅ |
-| `AI` | Workers AI model binding | ✅ |
-| `PLATO_SYNC_QUEUE` | Queue binding for real-time sync | ❌ |
-| `WEBHOOK_SECRET` | Webhook validation secret | ❌ |
-| `INGEST_SECRET` | Secret for /ingest API endpoint | ❌ |
-
-## Monitoring
-
-### View Logs
-```bash
-wrangler tail
-```
-
-### Metrics
-
-All operations are automatically logged with:
-- Request latency
-- Success/failure rates
-- Vectorize operation counts
-
-## Example Usage
-
-### JavaScript/TypeScript
-```typescript
-const apiBase = "https://plato-semantic-search.your-worker.workers.dev";
-
-// Search
-const response = await fetch(`${apiBase}/search`, {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    query: "how to use Cloudflare Vectorize",
-    topK: 5
-  })
-});
-const results = await response.json();
-
-// Upsert
-await fetch(`${apiBase}/index/upsert`, {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    id: "doc-1",
-    text: "Cloudflare Vectorize documentation",
-    metadata: { type: "docs" }
-  })
-});
-```
-
-### Python
-```python
-import requests
-
-api_base = "https://plato-semantic-search.your-worker.workers.dev"
-
-# Search
-response = requests.post(f"{api_base}/search", json={
-    "query": "how to use Cloudflare Vectorize",
-    "topK": 5
-})
-results = response.json()
-
-# Upsert
-requests.post(f"{api_base}/index/upsert", json={
-    "id": "doc-1",
-    "text": "Cloudflare Vectorize documentation",
-    "metadata": { "type": "docs" }
-})
-```
-
-## Best Practices
-
-1. **Batch Operations**: Use `/index/upsert-batch` for bulk indexing to reduce API calls
-2. **Caching**: The API includes built-in cache headers for search responses
-3. **Rate Limiting**: Add Cloudflare Rate Limiting for production use
-4. **Authentication**: Add API key authentication for production endpoints
-5. **Monitoring**: Set up Workers AI and Vectorize monitoring dashboards
-
-## License
-
-MIT
