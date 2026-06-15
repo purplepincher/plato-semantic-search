@@ -112,10 +112,22 @@ const EMBEDDING_CACHE_TTL = 300;
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
+    // Enhanced CORS configuration - restrict origins for production
+    const requestOrigin = request.headers.get("Origin") || "";
+    const allowedOrigins = [
+      "https://fleet-vector-api.casey-digennaro.workers.dev",
+      "https://plato.casey-digennaro.workers.dev",
+      "http://localhost:5173",
+      "http://localhost:3000"
+    ];
+    const corsOrigin = allowedOrigins.includes(requestOrigin) ? requestOrigin : "*";
+    
     const corsHeaders = {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type, Authorization",
+      "Access-Control-Allow-Origin": corsOrigin,
+      "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS, PATCH",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With, X-CSRF-Token",
+      "Access-Control-Allow-Credentials": "true",
+      "Access-Control-Max-Age": "86400", // 24 hours
     };
 
     // Handle CORS preflight
@@ -127,10 +139,23 @@ export default {
       // Routes
       switch (url.pathname) {
         // Health check
-        case "/health":
-          return new Response(JSON.stringify({ status: "ok" }), {
+        case "/health": {
+          const uptime = Date.now() - ((globalThis as any).startTime || Date.now());
+          const stats = await env.PLATO_VECTORIZE.getStats().catch(() => ({ count: 0, dimension: 384 }));
+          return new Response(JSON.stringify({
+            status: "ok",
+            uptime_ms: uptime,
+            uptime_human: `${Math.floor(uptime / 3600000)}h ${Math.floor((uptime % 3600000) / 60000)}m`,
+            vector_index: {
+              name: "plato-semantic-index",
+              count: stats.count,
+              dimension: stats.dimension,
+            },
+            timestamp: Date.now(),
+          }), {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
+        }
 
         // Get index statistics
         case "/index/stats":
@@ -281,7 +306,8 @@ export default {
 
 async function handleSearch(request: Request, env: Env, corsHeaders: Record<string, string>): Promise<Response> {
   const searchReq: SearchRequest = await request.json();
-  const { query, topK = 10, filter } = searchReq;
+  const { query, topK = 10, filter, includeRaw = false } = searchReq;
+  const cacheTtl = includeRaw ? 0 : SEARCH_CACHE_TTL;
 
   if (!query) {
     return new Response(
@@ -290,59 +316,117 @@ async function handleSearch(request: Request, env: Env, corsHeaders: Record<stri
     );
   }
 
-  // Generate embedding for search query
-  const embeddingResponse = await env.AI.run("@cf/baai/bge-small-en-v1.5", {
-    text: query,
+  // Generate cache key
+  const cacheKey = new Request(request.url, {
+    method: "POST",
+    body: JSON.stringify({ query, topK, filter, includeRaw }),
   });
-  const [queryEmbedding] = embeddingResponse.data;
+  const cache = caches.default;
+  const cachedResponse = await cache.match(cacheKey);
 
-  // Perform vector search
-  const results = await env.PLATO_VECTORIZE.query(queryEmbedding.embedding, {
-    topK: topK,
-    returnValues: false,
-    returnMetadata: true,
-    ...(filter ? { filter: filter } : {}),
-  });
+  if (cachedResponse && cacheTtl > 0) {
+    return cachedResponse;
+  }
 
-  // Format results with full crate metadata
-  const formattedResults: SearchResult[] = await Promise.all(results.matches.map(async (match) => {
-    // Fetch full crate metadata from KV (if available)
-    let crateMetadata: CrateMetadata | null = null;
-    try {
-      const crateResponse = await fetch(`https://fleet-vector-api.casey-digennaro.workers.dev/crates/${match.id}`);
-      if (crateResponse.ok) {
-        crateMetadata = await crateResponse.json();
-      }
-    } catch (e) {
-      console.warn(`Failed to fetch metadata for crate ${match.id}:`, e);
+  try {
+    // Generate embedding for search query
+    const embeddingResponse = await env.AI.run("@cf/baai/bge-small-en-v1.5", {
+      text: query,
+    });
+    
+    if (!embeddingResponse.data || !embeddingResponse.data[0]?.embedding) {
+      throw new Error("Failed to generate query embedding");
     }
+    
+    const [queryEmbedding] = embeddingResponse.data;
 
-    return {
-      id: match.id,
-      score: match.score,
-      name: crateMetadata?.name || match.id,
-      description: crateMetadata?.description || (match.metadata?.text as string || undefined),
-      version: crateMetadata?.version,
-      domain: crateMetadata?.domain,
-      tests: crateMetadata?.tests,
-      loc: crateMetadata?.loc,
-      github_url: crateMetadata?.github_url,
-      keywords: crateMetadata?.keywords,
-      embedded_at: crateMetadata?.embedded_at,
-      model: crateMetadata?.model || "@cf/baai/bge-small-en-v1.5",
-      dims: crateMetadata?.dims || 384,
-      metadata: match.metadata as Record<string, any> || undefined,
-    };
-  }));
+    // Perform vector search
+    const results = await env.PLATO_VECTORIZE.query(queryEmbedding.embedding, {
+      topK: Math.min(topK, 100), // Enforce maximum of 100 results
+      returnValues: false,
+      returnMetadata: true,
+      ...(filter ? { filter: filter } : {}),
+    });
 
-  return new Response(
-    JSON.stringify({
+    // Format results with full crate metadata
+    const formattedResults: SearchResult[] = await Promise.all(results.matches.map(async (match) => {
+      // Fetch full crate metadata from fleet API
+      let crateMetadata: CrateMetadata | null = null;
+      try {
+        const crateResponse = await fetch(`https://fleet-vector-api.casey-digennaro.workers.dev/crates/${match.id}`);
+        if (crateResponse.ok) {
+          crateMetadata = await crateResponse.json();
+        }
+      } catch (e) {
+        console.warn(`Failed to fetch metadata for crate ${match.id}:`, e);
+      }
+
+      // Build base result
+      const baseResult: SearchResult = {
+        id: match.id,
+        score: match.score,
+        name: crateMetadata?.name || match.id,
+        description: crateMetadata?.description || (match.metadata?.text as string || undefined),
+        version: crateMetadata?.version,
+        domain: crateMetadata?.domain,
+        tests: crateMetadata?.tests,
+        loc: crateMetadata?.loc,
+        github_url: crateMetadata?.github_url,
+        keywords: crateMetadata?.keywords,
+        embedded_at: crateMetadata?.embedded_at,
+        model: crateMetadata?.model || "@cf/baai/bge-small-en-v1.5",
+        dims: crateMetadata?.dims || 384,
+      };
+
+      // Add raw metadata only if explicitly requested
+      if (includeRaw) {
+        baseResult.metadata = match.metadata as Record<string, any> || undefined;
+      }
+
+      return baseResult;
+    }));
+
+    // Build final response with metadata
+    const responseBody = JSON.stringify({
       query: query,
       results: formattedResults,
       count: formattedResults.length,
-    }),
-    { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-  );
+      timestamp: Date.now(),
+      parameters: {
+        topK: Math.min(topK, 100),
+        filter: filter || null,
+        includeRaw: includeRaw,
+        cached: false
+      },
+    });
+
+    // Create response with appropriate headers
+    const response = new Response(responseBody, {
+      status: 200,
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "application/json",
+        "Cache-Control": `public, max-age=${cacheTtl}`,
+      },
+    });
+
+    // Cache successful response if appropriate
+    if (cacheTtl > 0) {
+      await cache.put(cacheKey, response.clone());
+    }
+
+    return response;
+  } catch (error) {
+    console.error("Search handler error:", error);
+    return new Response(
+      JSON.stringify({
+        error: "Search operation failed",
+        message: error instanceof Error ? error.message : "Unknown error occurred",
+        timestamp: Date.now()
+      }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
 }
 
 async function handleUpsert(request: Request, env: Env, corsHeaders: Record<string, string>): Promise<Response> {

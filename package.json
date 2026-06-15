@@ -5,7 +5,11 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
-    "build": "wrangler build"
+    "build": "wrangler build",
+    "test": "npx mocha test/**/*.test.ts",
+    "batch:upsert": "ts-node scripts/batch-ingest.ts /batch/upsert",
+    "batch:delete": "ts-node scripts/batch-ingest.ts /batch/delete",
+    "ingest": "ts-node scripts/batch-ingest.ts /ingest"
   },
   "dependencies": {
   },
