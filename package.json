@@ -8,8 +8,6 @@
     "build": "wrangler build"
   },
   "dependencies": {
-    "@cloudflare/vectorize": "^2.0.0",
-    "@cloudflare/workers-ai": "^1.0.0"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20240512.0",

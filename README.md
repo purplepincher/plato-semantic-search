@@ -87,6 +87,64 @@ Content-Type: application/json
 }
 ```
 
+### Find Similar Crates
+```
+POST /similar
+Content-Type: application/json
+
+{
+  "crate_name": "plato-core",
+  "topK": 10
+}
+```
+
+### Context-Aware Recommendations
+```
+POST /recommend
+Content-Type: application/json
+
+{
+  "context": "building a fleet management system",
+  "topK": 5
+}
+```
+
+### Quality Gap Analysis
+```
+POST /gap-analysis
+Content-Type: application/json
+
+{
+  "domain": "system-administration"
+}
+```
+
+### Bulk Crate Ingest (Authenticated)
+```
+POST /ingest
+Authorization: Bearer YOUR_INGEST_SECRET
+Content-Type: application/json
+
+[
+  {
+    "name": "plato-core",
+    "description": "Core Plato agent framework",
+    "version": "1.0.0",
+    "domain": "core",
+    "tests": 24,
+    "loc": 1250,
+    "github_url": "https://github.com/SuperInstance/plato-core",
+    "keywords": ["agent-framework", "fleet-management"],
+    "readme": "Full Readme content..."
+  }
+]
+```
+
+### Get Single Crate Metadata
+```
+GET /crates/:crate_name
+```
+
 ### Upsert Document
 ```
 POST /index/upsert
@@ -178,6 +236,7 @@ The built-in queue consumer will automatically:
 | `AI` | Workers AI model binding | ✅ |
 | `PLATO_SYNC_QUEUE` | Queue binding for real-time sync | ❌ |
 | `WEBHOOK_SECRET` | Webhook validation secret | ❌ |
+| `INGEST_SECRET` | Secret for /ingest API endpoint | ❌ |
 
 ## Monitoring
 
