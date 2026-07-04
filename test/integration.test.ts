@@ -59,7 +59,7 @@ function del(path: string, body: unknown): Request {
 }
 
 describe('Plato Worker – integration', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => { vi.clearAllMocks(); });
 
   // ── GET /health ──────────────────────────────────────────────────────────────
 

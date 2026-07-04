@@ -19,6 +19,10 @@ All endpoints return JSON and include CORS headers (`Access-Control-Allow-Origin
 
 ## Setup
 
+> **New here?** Read **[SETUP.md](./SETUP.md)** — it is the authoritative,
+> zero-context deploy guide covering every binding, secret, the Vectorize
+> index, seeding, and testing. The summary below is the short version.
+
 ### 1. Create the Vectorize index
 
 BGE-small-en-v1.5 produces **384-dimensional** vectors.  
@@ -234,7 +238,7 @@ Without `API_KEY`, the worker is open (suitable for internal/private deployments
 # Type check
 npm run type-check
 
-# Unit tests (no remote needed)
+# Unit + integration + in-memory e2e tests (no remote needed)
 npm test
 
 # Interactive watch mode
@@ -242,6 +246,10 @@ npm run test:watch
 
 # Local dev against live Vectorize + AI
 npm run dev   # wrangler dev --remote
+
+# Seed the index from data/seed.json (see SETUP.md §6 for full options)
+npm run seed:dev                                              # local
+npm run seed -- https://plato-semantic-search.<account>.workers.dev --api-key "$API_KEY"   # prod
 ```
 
 ---
