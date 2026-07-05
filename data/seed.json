@@ -1,77 +1,77 @@
 {
-  "_comment": "Seed corpus for plato-semantic-search. POST the `vectors` array to /upsert. Text is auto-embedded by Workers AI (@cf/baai/bge-small-en-v1.5, 384-dim). metadata.domain (string) and metadata.wave (number) match the metadata indexes documented in SETUP.md / README.",
+  "_comment": "Seed corpus for plato-semantic-search. POST the `vectors` array to /upsert. Text is auto-embedded by Workers AI (@cf/baai/bge-small-en-v1.5, 384-dim). metadata.domain (string) and metadata.version (number) match the optional metadata indexes documented in SETUP.md / README.",
   "vectors": [
     {
-      "id": "lau-conservation-c",
-      "text": "Conservation laws in ternary logic: a C-language treatment of balanced ternary arithmetic and the invariants preserved under three-valued transformations.",
-      "namespace": "wave-3",
-      "metadata": { "domain": "algebra", "wave": 3, "lang": "c", "author": "lau" }
+      "id": "doc-balanced-ternary",
+      "text": "Balanced ternary arithmetic: representing numbers with digits {-1, 0, +1}, carry propagation, and arithmetic invariants under three-valued transformations.",
+      "namespace": "reference",
+      "metadata": { "domain": "algebra", "version": 3, "lang": "c", "author": "docs" }
     },
     {
-      "id": "lau-flux-rs",
-      "text": "Flux hyperbolic geometry on the Poincare disk: Lorentz boosts and Mobius transformations implemented in Rust with const generics.",
-      "namespace": "wave-3",
-      "metadata": { "domain": "geometry", "wave": 3, "lang": "rust", "author": "lau" }
+      "id": "doc-hyperbolic-geometry",
+      "text": "Hyperbolic geometry on the Poincare disk: geodesics, isometries, and the Lorentz inner product on the unit disk implemented in Rust with const generics.",
+      "namespace": "reference",
+      "metadata": { "domain": "geometry", "version": 3, "lang": "rust", "author": "docs" }
     },
     {
-      "id": "cuda-oxide",
-      "text": "GPU SIMD matrix multiplication kernels written in CUDA and Oxide for dense linear algebra workloads, with tiled shared-memory optimization.",
-      "namespace": "wave-2",
-      "metadata": { "domain": "linear-algebra", "wave": 2, "lang": "cuda", "author": "oxide" }
+      "id": "doc-gpu-matmul",
+      "text": "GPU SIMD matrix multiplication kernels for dense linear algebra workloads, with tiled shared-memory optimization and CUDA programming patterns.",
+      "namespace": "reference",
+      "metadata": { "domain": "linear-algebra", "version": 2, "lang": "cuda", "author": "docs" }
     },
     {
-      "id": "plato-store-kv",
-      "text": "Plato durable key-value store backed by Cloudflare Workers KV with read-through caching and eventual consistency semantics.",
-      "namespace": "wave-1",
-      "metadata": { "domain": "storage", "wave": 1, "lang": "typescript", "author": "plato" }
+      "id": "doc-kv-cache",
+      "text": "Durable key-value store backed by Cloudflare Workers KV with read-through caching, stale-while-revalidate, and eventual consistency semantics.",
+      "namespace": "reference",
+      "metadata": { "domain": "storage", "version": 1, "lang": "typescript", "author": "docs" }
     },
     {
-      "id": "plato-vectorize-bridge",
-      "text": "Bridge crate connecting Plato embeddings to Cloudflare Vectorize for approximate nearest neighbor search over cosine similarity.",
-      "namespace": "wave-2",
-      "metadata": { "domain": "search", "wave": 2, "lang": "rust", "author": "plato" }
+      "id": "doc-vector-search",
+      "text": "Bridge connecting embedding models to Cloudflare Vectorize for approximate nearest neighbor search over cosine similarity.",
+      "namespace": "reference",
+      "metadata": { "domain": "search", "version": 2, "lang": "rust", "author": "docs" }
     },
     {
-      "id": "ternary-logic-primer",
-      "text": "A primer on three-valued logic: Kleene and Lukasiewicz semantics, truth tables, and conservation of tautologies across ternary algebras.",
-      "namespace": "wave-3",
-      "metadata": { "domain": "algebra", "wave": 3, "lang": "text", "author": "lau" }
+      "id": "doc-three-valued-logic",
+      "text": "A primer on three-valued logic: Kleene and Lukasiewicz semantics, truth tables, and preservation of tautologies across ternary algebras.",
+      "namespace": "reference",
+      "metadata": { "domain": "algebra", "version": 3, "lang": "text", "author": "docs" }
     },
     {
-      "id": "hyperbolic-poincare",
+      "id": "doc-poincare-disk",
       "text": "The Poincare disk model of hyperbolic geometry: geodesics, isometries, and the Lorentz inner product on the unit disk.",
-      "namespace": "wave-3",
-      "metadata": { "domain": "geometry", "wave": 3, "lang": "text", "author": "lau" }
+      "namespace": "reference",
+      "metadata": { "domain": "geometry", "version": 3, "lang": "text", "author": "docs" }
     },
     {
-      "id": "simd-matmul",
+      "id": "doc-simd-cpu",
       "text": "SIMD-accelerated dense matrix multiplication for CPU: AVX-512 and NEON intrinsics, cache blocking, and autotuning tile sizes.",
-      "namespace": "wave-2",
-      "metadata": { "domain": "linear-algebra", "wave": 2, "lang": "c", "author": "oxide" }
+      "namespace": "reference",
+      "metadata": { "domain": "linear-algebra", "version": 2, "lang": "c", "author": "docs" }
     },
     {
-      "id": "workers-kv-cache",
+      "id": "doc-workers-cache",
       "text": "Read-through caching patterns for Workers KV: stale-while-revalidate, edge regional caches, and cache-key design for hot keys.",
-      "namespace": "wave-1",
-      "metadata": { "domain": "storage", "wave": 1, "lang": "typescript", "author": "plato" }
+      "namespace": "reference",
+      "metadata": { "domain": "storage", "version": 1, "lang": "typescript", "author": "docs" }
     },
     {
-      "id": "ann-cosine",
+      "id": "doc-ann-cosine",
       "text": "Approximate nearest neighbor search with cosine similarity: HNSW indexing, quantization, and recall tradeoffs on Vectorize.",
-      "namespace": "wave-2",
-      "metadata": { "domain": "search", "wave": 2, "lang": "rust", "author": "plato" }
+      "namespace": "reference",
+      "metadata": { "domain": "search", "version": 2, "lang": "rust", "author": "docs" }
     },
     {
-      "id": "lorentz-boost",
+      "id": "doc-lorentz-boost",
       "text": "Lorentz transformations and relativistic boosts: the Lorentz group, invariant intervals, and hyperbolic rotations of Minkowski space.",
-      "namespace": "wave-3",
-      "metadata": { "domain": "geometry", "wave": 3, "lang": "text", "author": "lau" }
+      "namespace": "reference",
+      "metadata": { "domain": "geometry", "version": 3, "lang": "text", "author": "docs" }
     },
     {
-      "id": "kleene-three-valued",
+      "id": "doc-kleene-logic",
       "text": "Kleene's three-valued logic with unknown as a third truth value: strong and weak Kleene tables, applications to database null semantics.",
-      "namespace": "wave-3",
-      "metadata": { "domain": "algebra", "wave": 3, "lang": "text", "author": "lau" }
+      "namespace": "reference",
+      "metadata": { "domain": "algebra", "version": 3, "lang": "text", "author": "docs" }
     }
   ]
 }

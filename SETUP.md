@@ -73,11 +73,11 @@ are **immutable** after creation, so get them right the first time:
 npx wrangler vectorize create plato-search --dimensions=384 --metric=cosine
 ```
 
-Optional metadata indexes (enable `filter` on `domain` / `wave` at query time):
+Optional metadata indexes (enable `filter` on `domain` / `version` at query time):
 
 ```bash
 npx wrangler vectorize create-metadata-index plato-search --property-name=domain --type=string
-npx wrangler vectorize create-metadata-index plato-search --property-name=wave  --type=number
+npx wrangler vectorize create-metadata-index plato-search --property-name=version  --type=number
 ```
 
 ---

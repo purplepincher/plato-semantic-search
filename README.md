@@ -1,7 +1,7 @@
 # plato-semantic-search
 
-Production Cloudflare Worker for semantic search over the Plato/SuperInstance crate ecosystem.  
-Uses **Workers AI BGE-small-en-v1.5** (384-dim) for embeddings and **Vectorize** with cosine similarity for ANN retrieval.
+Production Cloudflare Worker for semantic search using **Workers AI BGE-small-en-v1.5**
+(384-dim) embeddings and **Vectorize** cosine-similarity ANN retrieval.
 
 ## Endpoints
 
@@ -38,7 +38,7 @@ Optional — create metadata indexes before inserting any vectors:
 npx wrangler vectorize create-metadata-index plato-search \
   --property-name=domain --type=string
 npx wrangler vectorize create-metadata-index plato-search \
-  --property-name=wave --type=number
+  --property-name=version --type=number
 ```
 
 ### 2. Install dependencies
@@ -102,11 +102,11 @@ npm run deploy
 
 ```jsonc
 {
-  "query": "conservation law ternary logic",   // required
-  "topK": 10,                                   // 1-100, default 10
-  "namespace": "wave-3",                        // optional
-  "filter": { "domain": "algebra" },            // optional metadata filter
-  "returnMetadata": "indexed"                   // "none" | "indexed" | "all" (default "indexed")
+  "query": "semantic retrieval with vector search",   // required
+  "topK": 10,                                          // 1-100, default 10
+  "namespace": "docs",                                 // optional
+  "filter": { "domain": "search" },                    // optional metadata filter
+  "returnMetadata": "indexed"                          // "none" | "indexed" | "all" (default "indexed")
 }
 ```
 
@@ -117,9 +117,9 @@ npm run deploy
 ```jsonc
 {
   "results": [
-    { "id": "lau-conservation-c", "score": 0.934, "metadata": { "domain": "algebra" } }
+    { "id": "doc-001", "score": 0.934, "metadata": { "domain": "search" } }
   ],
-  "query": "conservation law ternary logic",
+  "query": "semantic retrieval with vector search",
   "topK": 10,
   "count": 1,
   "model": "@cf/baai/bge-small-en-v1.5",
@@ -132,7 +132,7 @@ npm run deploy
 ```bash
 curl -X POST https://plato-semantic-search.<account>.workers.dev/search \
   -H 'Content-Type: application/json' \
-  -d '{"query":"ternary logic conservation","topK":5}'
+  -d '{"query":"vector search embeddings","topK":5}'
 ```
 
 ---
@@ -148,13 +148,13 @@ Provide `text` (auto-embedded) or pre-computed `values`, not both.
 {
   "vectors": [
     {
-      "id": "lau-flux-rs",
-      "text": "flux hyperbolic geometry Poincare Lorentz",
-      "namespace": "wave-3",
-      "metadata": { "domain": "geometry", "wave": 3 }
+      "id": "doc-001",
+      "text": "Fast SIMD matrix multiplication for dense linear algebra workloads",
+      "namespace": "reference",
+      "metadata": { "domain": "linear-algebra", "version": 2 }
     },
     {
-      "id": "cuda-oxide",
+      "id": "doc-002",
       "values": [0.12, 0.34],
       "metadata": { "domain": "gpu" }
     }
@@ -201,13 +201,13 @@ curl -X POST https://plato-semantic-search.<account>.workers.dev/upsert \
 **Request**
 
 ```json
-{ "ids": ["lau-flux-rs", "cuda-oxide"] }
+{ "ids": ["doc-001", "doc-002"] }
 ```
 
 **Response**
 
 ```json
-{ "deleted": 2, "ids": ["lau-flux-rs", "cuda-oxide"] }
+{ "deleted": 2, "ids": ["doc-001", "doc-002"] }
 ```
 
 Accepts up to **10,000 IDs** per request; batched internally at 1,000/call.
