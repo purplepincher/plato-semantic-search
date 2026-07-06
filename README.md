@@ -142,6 +142,10 @@ See [`wrangler.toml`](./wrangler.toml) and [`SETUP.md`](./SETUP.md) for the full
 - Authentication is only via Bearer token; no other auth methods are built in.
 - The worker does not cache results.
 
+## License
+
+MIT — see [LICENSE](./LICENSE).
+
 ## See also
 
 - [SETUP.md](./SETUP.md) – detailed deployment guide
