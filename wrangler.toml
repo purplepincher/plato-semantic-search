@@ -10,4 +10,4 @@ binding = "VECTORIZE"
 index_name = "plato-search"
 
 # Secrets (set via: wrangler secret put API_KEY)
-# API_KEY — optional Bearer token to protect write endpoints
+# API_KEY — optional Bearer token protecting every endpoint (incl. /health)
